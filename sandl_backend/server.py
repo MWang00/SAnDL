@@ -18,16 +18,14 @@ app = Flask(__name__)
 transformer = SentenceTransformer("all-MiniLM-L6-v2")
 prisma = Prisma()
 r = redis.Redis(
-  host='redis-18554.c284.us-east1-2.gce.cloud.redislabs.com',
-  port=18554,
-  password=os.getenv("REDIS_PW"),
-  decode_responses=True
-)
+  host='redis-16537.c10.us-east-1-2.ec2.cloud.redislabs.com',
+  port=16537,
+  password=os.getenv("REDIS_PW"))
 maxAllowedCache = 100
 
 @app.route("/")
 def hello():
-    return "hello"
+    return "redis back up"
 
 @app.route("/sign_up", methods=["POST"])
 async def sign_up():
@@ -73,6 +71,10 @@ async def login():
         return dumps({
             'jwt': encoded
         })
+    elif (user == None):
+        return dumps({
+            'error': 'user not found'
+        }), 405
     else:
         return dumps({
             "error": "password not correct"
@@ -151,21 +153,23 @@ async def delete_api_key():
 
 @app.route("/get_intent", methods=["POST"])
 def get_intent():
-    encoded = request.json["jwt"]
-    decoded = jwt.decode(encoded, os.getenv("JWT_SECRET"), algorithms=["HS256"])
+    # encoded = request.json["jwt"]
+    # decoded = jwt.decode(encoded, os.getenv("JWT_SECRET"), algorithms=["HS256"])
     model = Model(request.json["prompt"], model=transformer)
-    out = r.get(model.hash())
-    if out != None:
+    try:
+        out = r.get(model.hash())
+        if out != None:
+            return dumps({
+                "certaintyValue": out
+            })
+        if r.dbsize() >= maxAllowedCache:
+            r.delete(next(r.scan()))
+        r.set(model.hash(), out)
+    finally:
+        out = model()
         return dumps({
-            "certaintyValue": out
+            "certaintyValue": out[0]
         })
-    out = model()
-    if r.dbsize() >= maxAllowedCache:
-        r.delete(next(r.scan()))
-    r.set(model.hash(), out)
-    return dumps({
-        "certaintyValue": out
-    })
 
 
 if (__name__ == "__main__"):
