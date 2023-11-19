@@ -8,7 +8,8 @@ Our model uses [Sentence Transformers](https://huggingface.co/docs/transformers/
 
 ## Running the Front-end
 SAnDL was created using the [Streamlit](https://streamlit.io/) framework for Python.
+
 To run the front-end, run the `streamlit run 3_Logout.py` command while in the `SAnDL_frontend` directory.
 
 ### Contact Us
-You can reach out to us on [LinkedIn].
+You can reach out to us on LinkedIn.
